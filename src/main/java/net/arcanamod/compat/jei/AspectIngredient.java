@@ -24,7 +24,7 @@ public class AspectIngredient extends AspectStack implements Cloneable {
 	public boolean isUndecided = false;
 	
 	public AspectIngredient(Aspect aspect, float amount, boolean isUndecided){
-		this.isEmpty = amount <= 0 || aspect == Aspects.EMPTY;
+		boolean isEmpty = amount <= 0 || aspect == Aspects.EMPTY;
 		
 		this.aspect = isEmpty ? Aspects.EMPTY : aspect;
 		this.amount = isEmpty ? 0 : amount;

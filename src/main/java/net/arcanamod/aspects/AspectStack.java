@@ -11,8 +11,8 @@ public class AspectStack{
 	// TODO: replace with a method that creates a new one, or make AspectStack immutable
 	public static final AspectStack EMPTY = new AspectStack(Aspects.EMPTY, 0);
 	
-	private float amount;
-	private Aspect aspect;
+	protected float amount;
+	protected Aspect aspect;
 	
 	public boolean isEmpty(){
 		return amount == 0 || aspect == Aspects.EMPTY;
