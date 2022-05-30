@@ -1129,7 +1129,7 @@
 			],
 			"category": "arcana:fundamentals",
 			"parents": [
-				"~basic_wand"
+				"~arcana:basic_wand"
 			],
 			"meta": [
 				"square_base",

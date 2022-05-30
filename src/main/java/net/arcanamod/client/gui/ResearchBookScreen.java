@@ -377,7 +377,10 @@ public class ResearchBookScreen extends Screen {
 
 	public PageStyle parentStyle(ResearchEntry entry, Parent parent){
 		// if the parent is greater than required, consider it complete
-		Objects.requireNonNull(entry, "Tried to get the stage of a parent entry that doesn't exist: " + parent.getEntry().toString() + " (from " + parent.asString() + ")");
+		if (entry == null){
+			Arcana.LOGGER.error("Tried to get the stage of a parent entry that doesn't exist: " + parent.getEntry().toString() + " (from " + parent.asString() + ")");
+			return PageStyle.NONE;
+		}
 		Researcher r = Researcher.getFrom(getMinecraft().player);
 		if(parent.getStage() == -1){
 			if(r.entryStage(entry) >= entry.sections().size())
