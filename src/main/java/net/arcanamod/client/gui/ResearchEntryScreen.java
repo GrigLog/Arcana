@@ -3,7 +3,6 @@ package net.arcanamod.client.gui;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.arcanamod.ArcanaConfig;
 import net.arcanamod.capabilities.Researcher;
 import net.arcanamod.client.research.EntrySectionRenderer;
 import net.arcanamod.client.research.RequirementRenderer;
@@ -17,6 +16,7 @@ import net.arcanamod.systems.research.ResearchEntry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.button.Button;
+import net.minecraft.client.gui.widget.button.ChangePageButton;
 import net.minecraft.client.renderer.*;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.util.InputMappings;
@@ -43,55 +43,60 @@ public class ResearchEntryScreen extends Screen {
 	ResearchEntry entry;
 	int index;
 	Screen parentScreen;
-	
+
 	Button left, right, cont, ret;
 	List<PinButton> pins;
-	
+
 	// there is: golem, crucible, crafting, infusion circle, arcane crafting, structure, wand(, arrow), crafting result
 	public static final String OVERLAY_SUFFIX = "_gui_overlay.png";
 	public static final String SUFFIX = "_gui.png";
-	
-	// 256 x 181 @ 0,0
-	public static final int PAGE_X = 17;
-	public static final int PAGE_Y = 10;
-	public static final int PAGE_WIDTH = 105;
-	public static final int PAGE_HEIGHT = 155;
-	public static final int RIGHT_X_OFFSET = 119;
-	public static final int HEIGHT_OFFSET = -10;
-	
-	public static float TEXT_SCALING = ArcanaConfig.BOOK_TEXT_SCALING.get().floatValue();
-	
+
+	public static final int PAGE_PADDING_INNER_X = 7;
+	public static final int PAGE_PADDING_TOP_Y = 10;
+	public static final int PAGE_WIDTH = 150;
+	public static final int PAGE_HEIGHT = 225;
+
+	public static float TEXTURE_SCALING = 1 / 0.7f;
+
+	public static final int SPRITE_WIDTH = 256;
+	public static final int SPRITE_HEIGHT = 181;
+
 	public ResearchEntryScreen(ResearchEntry entry, Screen parentScreen){
 		super(new StringTextComponent(""));
 		this.entry = entry;
 		this.parentScreen = parentScreen;
 		bg = new ResourceLocation(entry.key().getNamespace(), "textures/gui/research/" + entry.category().book().getPrefix() + SUFFIX);
 	}
-	
+
 	public void render(MatrixStack stack,  int mouseX, int mouseY, float partialTicks){
 		renderBackground(stack);
-		super.render(stack, mouseX, mouseY, partialTicks);
 		getMinecraft().getTextureManager().bindTexture(bg);
 		RenderSystem.color4f(1f, 1f, 1f, 1f);
-		drawTexturedModalRect(stack, (width - 256) / 2, (height - 181) / 2 + HEIGHT_OFFSET, 0, 0, 256, 181);
-		
+		ClientUiUtil.drawScalable(stack, TEXTURE_SCALING, width / 2, height / 2, 0, 0, SPRITE_WIDTH, SPRITE_HEIGHT, 256, 256);
+
 		// Main rendering
 		if(totalLength() > index){
 			EntrySection section = getSectionAtIndex(index);
-			if(section != null)
-				EntrySectionRenderer.get(section).render(stack, section, sectionIndex(index), width, height, mouseX, mouseY, false, getMinecraft().player);
+			if(section != null) {
+				int x = width / 2 - PAGE_WIDTH - PAGE_PADDING_INNER_X;
+				int y = (height - PAGE_HEIGHT) / 2 + PAGE_PADDING_TOP_Y;
+				EntrySectionRenderer.get(section).render(stack, section, sectionIndex(index), x, y, width, height, mouseX, mouseY, getMinecraft().player);
+			}
 		}
 		if(totalLength() > index + 1){
 			EntrySection section = getSectionAtIndex(index + 1);
-			if(section != null)
-				EntrySectionRenderer.get(section).render(stack, section, sectionIndex(index + 1), width, height, mouseX, mouseY, true, getMinecraft().player);
+			if(section != null) {
+				int x = width / 2 + PAGE_PADDING_INNER_X;
+				int y = (height - PAGE_HEIGHT) / 2 + PAGE_PADDING_TOP_Y;
+				EntrySectionRenderer.get(section).render(stack, section, sectionIndex(index + 1), x, y, width, height, mouseX, mouseY, getMinecraft().player);
+			}
 		}
-		
+
 		// Requirements
 		Researcher r = Researcher.getFrom(getMinecraft().player);
 		if(r.entryStage(entry) < entry.sections().size() && entry.sections().get(r.entryStage(entry)).getRequirements().size() > 0){
 			List<Requirement> requirements = entry.sections().get(r.entryStage(entry)).getRequirements();
-			final int y = (height - 181) / 2 + 180;
+			final int y = (height + SPRITE_HEIGHT) / 2;
 			final int reqWidth = 20;
 			final int baseX = (width / 2) - (reqWidth * requirements.size() / 2);
 			for(int i = 0, size = requirements.size(); i < size; i++){
@@ -113,28 +118,38 @@ public class ResearchEntryScreen extends Screen {
 					break;
 				}
 		}
-		
+
+		// Buttons
+		super.render(stack, mouseX, mouseY, partialTicks);
+
 		// After-renders (such as tooltips)
 		if(totalLength() > index){
 			EntrySection section = getSectionAtIndex(index);
-			if(section != null)
-				EntrySectionRenderer.get(section).renderAfter(stack, section, sectionIndex(index), width, height, mouseX, mouseY, false, getMinecraft().player);
+			if(section != null) {
+				int x = width / 2 - PAGE_WIDTH - PAGE_PADDING_INNER_X;
+				int y = (height - PAGE_HEIGHT) / 2 + PAGE_PADDING_TOP_Y;
+				EntrySectionRenderer.get(section).renderAfter(stack, section, index, x, y, width, height, mouseX, mouseY, getMinecraft().player);
+			}
 		}
 		if(totalLength() > index + 1){
 			EntrySection section = getSectionAtIndex(index + 1);
-			if(section != null)
-				EntrySectionRenderer.get(section).renderAfter(stack, section, sectionIndex(index + 1), width, height, mouseX, mouseY, true, getMinecraft().player);
+			if(section != null) {
+				int x = width / 2 + PAGE_PADDING_INNER_X;
+				int y = (height - PAGE_HEIGHT) / 2 + PAGE_PADDING_TOP_Y;
+				EntrySectionRenderer.get(section).renderAfter(stack, section, index, x, y, width, height, mouseX, mouseY, getMinecraft().player);
+			}
 		}
-		
+
 		// Pin tooltips
 		pins.forEach(button -> button.renderAfter(stack, mouseX, mouseY));
 	}
-	
-	public void init(@Nonnull Minecraft mc, int p_init_2_, int p_init_3_){
-		super.init(mc, p_init_2_, p_init_3_);
-		final int y = (height - 181) / 2 + 190 + HEIGHT_OFFSET;
+
+	public void init(@Nonnull Minecraft mc, int posX, int posY) {
+		super.init(mc, posX, posY);
+
+		final int y = (height + (int)(PAGE_HEIGHT * 0.96)) / 2;
 		final int x = width / 2 - 6;
-		final int dist = 127;
+		final int dist = PAGE_WIDTH;
 		left = addButton(new ChangePageButton(x - dist, y, false, button -> {
 			if(canTurnLeft())
 				index -= 2;
@@ -150,6 +165,7 @@ public class ResearchEntryScreen extends Screen {
 			Connection.sendTryAdvance(entry.key());
 			// need to update visuals when an advance packet is received...
 			updateButtons();
+			Minecraft.getInstance().displayGuiScreen(parentScreen);
 		}){
 			// I can't be bothered to make a new type for something which will use this behaviours exactly once.
 			// If I ever need this behaviour elsewhere, I'll move it to a proper class.
@@ -159,17 +175,17 @@ public class ResearchEntryScreen extends Screen {
 			}
 		};
 		cont = addButton(button);
-		ret = addButton(new ReturnToBookButton(width / 2 - 7, (height - 181) / 2 - 26, b -> Minecraft.getInstance().displayGuiScreen(parentScreen)));
+		ret = addButton(new ReturnToBookButton(width / 2 - 7, (height - PAGE_HEIGHT) / 2 - 26, b -> Minecraft.getInstance().displayGuiScreen(parentScreen)));
 		pins = new ArrayList<>();
 		updateButtons();
 	}
-	
+
 	public void updateButtons(){
 		left.visible = canTurnLeft();
 		right.visible = canTurnRight();
 		Researcher researcher = Researcher.getFrom(getMinecraft().player);
 		cont.visible = researcher.entryStage(entry) < getVisibleSections().size();
-		
+
 		pins.forEach(button -> {
 			buttons.remove(button);
 			children.remove(button);
@@ -183,7 +199,7 @@ public class ResearchEntryScreen extends Screen {
 			addButton(e);
 		}
 	}
-	
+
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers){
 		if(super.keyPressed(keyCode, scanCode, modifiers))
 			return true;
@@ -196,7 +212,7 @@ public class ResearchEntryScreen extends Screen {
 			return false;
 		}
 	}
-	
+
 	public boolean mouseClicked(double mouseX, double mouseY, int mouseButton){
 		super.mouseClicked(mouseX, mouseY, mouseButton);
 		// mouse button 1 is right click, just return
@@ -208,7 +224,7 @@ public class ResearchEntryScreen extends Screen {
 		Researcher r = Researcher.getFrom(getMinecraft().player);
 		if(r.entryStage(entry) < entry.sections().size() && entry.sections().get(r.entryStage(entry)).getRequirements().size() > 0){
 			List<Requirement> requirements = entry.sections().get(r.entryStage(entry)).getRequirements();
-			final int y = (height - 181) / 2 + 180;
+			final int y = (height - SPRITE_HEIGHT) / 2 + 180;
 			final int reqSize = 20;
 			final int baseX = (width / 2) - (reqSize * requirements.size() / 2);
 			for(int i = 0, size = requirements.size(); i < size; i++)

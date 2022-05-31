@@ -42,7 +42,7 @@ public final class TextFormatter{
 	}
 	
 	private static float getTextWidth(){
-		return ResearchEntryScreen.PAGE_WIDTH / StringSectionRenderer.textScaling();
+		return ResearchEntryScreen.PAGE_WIDTH;
 	}
 	
 	public interface Span{

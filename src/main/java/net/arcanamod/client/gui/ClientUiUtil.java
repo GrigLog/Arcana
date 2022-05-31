@@ -1,6 +1,7 @@
 package net.arcanamod.client.gui;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.arcanamod.Arcana;
 import net.arcanamod.aspects.Aspect;
@@ -19,32 +20,40 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.*;
+import net.minecraft.client.renderer.model.IBakedModel;
+import net.minecraft.client.renderer.model.ItemCameraTransforms;
+import net.minecraft.client.renderer.texture.AtlasTexture;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.client.resources.I18n;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.vector.Matrix4f;
 import net.minecraft.util.text.*;
+import net.minecraft.world.World;
 import net.minecraftforge.fml.client.gui.GuiUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ClientUiUtil{
-	
+
 	private static ResourceLocation RESEARCH_EXPERTISE = Arcana.arcLoc("research_expertise");
-	
+
 	public static void renderAspectStack(MatrixStack matricies, AspectStack stack, int x, int y){
 		renderAspectStack(matricies, stack, x, y, UiUtil.tooltipColour(stack.getAspect()));
 	}
-	
+
 	public static void renderAspectStack(MatrixStack matricies, AspectStack stack, int x, int y, int colour){
 		renderAspectStack(matricies, stack.getAspect(), stack.getAmount(), x, y, colour);
 	}
-	
+
 	public static void renderAspectStack(MatrixStack stack, Aspect aspect, float amount, int x, int y){
 		renderAspectStack(stack, aspect, amount, x, y, UiUtil.tooltipColour(aspect));
 	}
-	
+
 	public static void renderAspectStack(MatrixStack stack, Aspect aspect, float amount, int x, int y, int colour){
 		Minecraft mc = Minecraft.getInstance();
 		// render aspect
@@ -58,20 +67,102 @@ public class ClientUiUtil{
 		mc.fontRenderer.renderString(s, x + 19 - mc.fontRenderer.getStringWidth(s), y + 10, colour, true, matrixstack.getLast().getMatrix(), impl, false, 0, 0xf000f0);
 		impl.finish();
 	}
-	
+
+	public static void renderAspectScalable(MatrixStack ms, float scale, Aspect aspect, int x, int y){
+		Minecraft.getInstance().textureManager.bindTexture(AspectUtils.getAspectTextureLocation(aspect));
+		drawScalable(ms, scale, x, y, 0, 0, 16, 16, 16, 16);
+	}
+
 	public static void renderAspect(MatrixStack stack, Aspect aspect, int x, int y){
 		Minecraft mc = Minecraft.getInstance();
 		mc.getTextureManager().bindTexture(AspectUtils.getAspectTextureLocation(aspect));
 		drawModalRectWithCustomSizedTexture(stack, x, y, 0, 0, 16, 16, 16, 16);
 	}
-	
-	public static void drawModalRectWithCustomSizedTexture(MatrixStack stack, int x, int y, float texX, float texY, int width, int height, int textureWidth, int textureHeight){
+
+	public static void drawModalRectWithCustomSizedTexture(MatrixStack stack, int x, int y, float texX, float texY, int texW, int texH, int textureWidth, int textureHeight){
 		int z = Minecraft.getInstance().currentScreen != null ? Minecraft.getInstance().currentScreen.getBlitOffset() : 1;
-		AbstractGui.blit(stack, x, y, z, texX, texY, width, height, textureWidth, textureHeight);
+		AbstractGui.blit(stack, x, y, z, texX, texY, texW, texH, textureHeight, textureWidth);
 	}
-	
-	public static void drawTexturedModalRect(MatrixStack stack, int x, int y, float texX, float texY, int width, int height){
-		drawModalRectWithCustomSizedTexture(stack, x, y, texX, texY, width, height, 256, 256);
+
+	public static void drawTexturedModalRect(MatrixStack stack, int x, int y, float texX, float texY, int texW, int texH){
+		drawModalRectWithCustomSizedTexture(stack, x, y, texX, texY, texW, texH, 256, 256);
+	}
+
+	public static void drawScalable(MatrixStack ms, float scale, int centerX, int centerY, int u, int v, int du, int dv){
+		drawScalable(ms, scale, centerX, centerY, u, v, du, dv, 256, 256);
+	}
+
+	public static void drawScalable(MatrixStack ms, float scale, int centerX, int centerY, int u, int v, int du, int dv, int textureWidth, int textureHeight){
+		scale /= 2; //this is required later when subtracting from centers
+		int x1 = (int) (centerX - du * scale);
+		int x2 = (int) (centerX + du * scale);
+		int y1 = (int) (centerY - dv * scale);
+		int y2 = (int) (centerY + dv * scale);
+		innerBlit(ms, x1, x2, y1, y2, 0, du, dv, u, v, textureWidth, textureHeight);
+	}
+
+	public static void drawScalableCorner(MatrixStack ms, float scale, int x1, int y1, int u, int v, int du, int dv, int textureWidth, int textureHeight){
+		int x2 = (int) (x1 + du * scale);
+		int y2 = (int) (y1 + dv * scale);
+		innerBlit(ms, x1, x2, y1, y2, 0, du, dv, u, v, textureWidth, textureHeight);
+	}
+
+	public static void itemCentered(ItemStack stack, int x, int y){
+		Minecraft mc = Minecraft.getInstance();
+		mc.getItemRenderer().renderItemAndEffectIntoGUI(stack, x - 8, y - 8);
+		mc.getItemRenderer().renderItemOverlayIntoGUI(mc.fontRenderer, stack, x - 8, y - 8, null);
+	}
+
+	public static void itemScaled(ItemStack stack, int x, int y){
+		Minecraft mc = Minecraft.getInstance();
+		ItemRenderer renderer = mc.getItemRenderer();
+		mc.textureManager.bindTexture(AtlasTexture.LOCATION_BLOCKS_TEXTURE);
+		mc.textureManager.getTexture(AtlasTexture.LOCATION_BLOCKS_TEXTURE).setBlurMipmapDirect(false, false);
+		RenderSystem.enableRescaleNormal();
+		RenderSystem.enableAlphaTest();
+		RenderSystem.defaultAlphaFunc();
+		RenderSystem.enableBlend();
+		RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+		RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
+		RenderSystem.translatef((float)x, (float)y, 100.0F + renderer.zLevel);
+		RenderSystem.translatef(8.0F, 8.0F, 0.0F);
+		RenderSystem.scalef(1.0F, -1.0F, 1.0F);
+		RenderSystem.scalef(16.0F, 16.0F, 16.0F);
+		MatrixStack matrixstack = new MatrixStack();
+		IRenderTypeBuffer.Impl irendertypebuffer$impl = Minecraft.getInstance().getRenderTypeBuffers().getBufferSource();
+		IBakedModel bakedmodel = renderer.getItemModelWithOverrides(stack, null, null);
+		boolean flag = !bakedmodel.isSideLit();
+		if (flag) {
+			RenderHelper.setupGuiFlatDiffuseLighting();
+		}
+
+		renderer.renderItem(stack, ItemCameraTransforms.TransformType.GUI, false, matrixstack, irendertypebuffer$impl, 15728880, OverlayTexture.NO_OVERLAY, bakedmodel);
+		irendertypebuffer$impl.finish();
+		RenderSystem.enableDepthTest();
+		if (flag) {
+			RenderHelper.setupGui3DDiffuseLighting();
+		}
+
+		RenderSystem.disableAlphaTest();
+		RenderSystem.disableRescaleNormal();
+		RenderSystem.popMatrix();
+	}
+
+	//copy-paste from AbstractGui
+	public static void innerBlit(MatrixStack matrixStack, int x1, int x2, int y1, int y2, int blitOffset, int uWidth, int vHeight, float uOffset, float vOffset, int textureWidth, int textureHeight) {
+		innerBlit(matrixStack.getLast().getMatrix(), x1, x2, y1, y2, blitOffset, (uOffset + 0.0F) / (float)textureWidth, (uOffset + (float)uWidth) / (float)textureWidth, (vOffset + 0.0F) / (float)textureHeight, (vOffset + (float)vHeight) / (float)textureHeight);
+	}
+
+	public static void innerBlit(Matrix4f matrix, int x1, int x2, int y1, int y2, int blitOffset, float minU, float maxU, float minV, float maxV) {
+		BufferBuilder bufferbuilder = Tessellator.getInstance().getBuffer();
+		bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX);
+		bufferbuilder.pos(matrix, (float)x1, (float)y2, (float)blitOffset).tex(minU, maxV).endVertex();
+		bufferbuilder.pos(matrix, (float)x2, (float)y2, (float)blitOffset).tex(maxU, maxV).endVertex();
+		bufferbuilder.pos(matrix, (float)x2, (float)y1, (float)blitOffset).tex(maxU, minV).endVertex();
+		bufferbuilder.pos(matrix, (float)x1, (float)y1, (float)blitOffset).tex(minU, minV).endVertex();
+		bufferbuilder.finishDrawing();
+		RenderSystem.enableAlphaTest();
+		WorldVertexBufferUploader.draw(bufferbuilder);
 	}
 	
 	public static boolean shouldShowAspectIngredients(){

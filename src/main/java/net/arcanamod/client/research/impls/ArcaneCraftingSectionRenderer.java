@@ -18,88 +18,50 @@ import net.minecraftforge.common.crafting.IShapedRecipe;
 import java.util.Collections;
 
 import static net.arcanamod.client.gui.ClientUiUtil.drawTexturedModalRect;
-import static net.arcanamod.client.gui.ResearchEntryScreen.HEIGHT_OFFSET;
+import static net.arcanamod.client.gui.ResearchEntryScreen.*;
 
 public class ArcaneCraftingSectionRenderer extends AbstractCraftingSectionRenderer<ArcaneCraftingSection>{
-	
-	void renderRecipe(MatrixStack matrices, IRecipe<?> recipe, ArcaneCraftingSection section, int pageIndex, int screenWidth, int screenHeight, int mouseX, int mouseY, boolean right, PlayerEntity player){
+	void renderRecipe(MatrixStack matrices, IRecipe<?> recipe, ArcaneCraftingSection section, int pageIndex, int x, int y, int screenWidth, int screenHeight, int mouseX, int mouseY, PlayerEntity player){
 		if(recipe instanceof IArcaneCraftingRecipe){
 			IArcaneCraftingRecipe craftingRecipe = (IArcaneCraftingRecipe)recipe;
-			int x = right ? ResearchEntryScreen.PAGE_X + ResearchEntryScreen.RIGHT_X_OFFSET : ResearchEntryScreen.PAGE_X, y = ResearchEntryScreen.PAGE_Y;
-			int ulX = x + (screenWidth - 256 + ResearchEntryScreen.PAGE_WIDTH) / 2 - 32;
-			int ulY = y + (screenHeight - 181 + ResearchEntryScreen.PAGE_HEIGHT) / 2 - 10 + HEIGHT_OFFSET;
-			if(craftingRecipe.getAspectStacks().length > 0)
-				ulY -= 15;
+			int centerX = x + PAGE_WIDTH / 2;
+			int centerY = y + (int)(PAGE_HEIGHT * 0.54);
 			mc().getTextureManager().bindTexture(textures);
-			drawTexturedModalRect(matrices, ulX - 10, ulY - 10, 73, 75, 84, 84);
-			
+			ClientUiUtil.drawScalable(matrices, TEXTURE_SCALING, centerX, centerY, 73, 75, 84, 84);
+
 			int width = recipe instanceof IShapedRecipe ? ((IShapedRecipe<?>)craftingRecipe).getRecipeWidth() : 3;
 			int height = recipe instanceof IShapedRecipe ? ((IShapedRecipe<?>)craftingRecipe).getRecipeHeight() : 3;
-			
+
 			for(int xx = 0; xx < width; xx++)
 				for(int yy = 0; yy < height; yy++){
 					int index = xx + yy * width;
 					if(index < recipe.getIngredients().size()){
-						int itemX = ulX + xx * 24;
-						int itemY = ulY + yy * 24;
+						int itemX = centerX + (xx - 1) * 34;
+						int itemY = centerY + (yy - 1) * 34;
 						ItemStack[] stacks = recipe.getIngredients().get(index).getMatchingStacks();
-						if(stacks.length > 0)
-							item(stacks[displayIndex(stacks.length, player)], itemX, itemY);
+						if(stacks.length > 0) {
+							ItemStack is = stacks[displayIndex(stacks.length, player)];
+							ClientUiUtil.itemCentered(is, itemX, itemY);
+							tooltips.add(new ItemTooltip(is, itemX, itemY));
+						}
 					}
 				}
 			// Display aspects
 			UndecidedAspectStack[] stacks = craftingRecipe.getAspectStacks();
 			// 1 aspect -> 0, 2-3 aspects -> 3 spacing, 4-5 aspects -> 2 spacing, 6 aspects -> 1 spacing
 			int spacing = (stacks.length == 1) ? 0 : (stacks.length >= 6) ? 1 : (stacks.length < 4) ? 3 : 2;
-			int aspectX = ulX + 73 / 2 - (craftingRecipe.getAspectStacks().length * (16 + spacing * 2)) / 2 - 4;
-			int aspectY = ulY + 82;
+			int aspectX = centerX - (craftingRecipe.getAspectStacks().length * (16 + spacing * 2)) / 2 - 4;
+			int aspectY = centerY + 62;
 			// Shadow behind the aspects for readability
 			for(int i = 0, length = stacks.length; i < length; i++){
 				UndecidedAspectStack stack = stacks[i];
 				Aspect display = stack.any ? Aspects.EXCHANGE : stack.stack.getAspect();
 				float amount = stack.stack.getAmount();
-				ClientUiUtil.renderAspectStack(matrices, display, amount, aspectX + i * (16 + 2 * spacing) + spacing, aspectY);
+				int newAspectX = aspectX + i * (16 + 2 * spacing) + spacing;
+				ClientUiUtil.renderAspectStack(matrices, display, amount, newAspectX, aspectY);
+				tooltips.add(new AspectTooltip(display, newAspectX + 8, aspectY + 8));
 			}
 		}else
 			error();
-	}
-	
-	void renderRecipeTooltips(MatrixStack matrices, IRecipe<?> recipe, ArcaneCraftingSection section, int pageIndex, int screenWidth, int screenHeight, int mouseX, int mouseY, boolean right, PlayerEntity player){
-		if(recipe instanceof IArcaneCraftingRecipe){
-			IArcaneCraftingRecipe craftingRecipe = (IArcaneCraftingRecipe)recipe;
-			int x = right ? ResearchEntryScreen.PAGE_X + ResearchEntryScreen.RIGHT_X_OFFSET : ResearchEntryScreen.PAGE_X, y = ResearchEntryScreen.PAGE_Y;
-			int ulX = x + (screenWidth - 256 + ResearchEntryScreen.PAGE_WIDTH) / 2 - 32;
-			int ulY = y + (screenHeight - 181 + ResearchEntryScreen.PAGE_HEIGHT) / 2 - 10 + HEIGHT_OFFSET;
-			if(craftingRecipe.getAspectStacks().length > 0)
-				ulY -= 15;
-			
-			int width = recipe instanceof IShapedRecipe ? ((IShapedRecipe<?>)craftingRecipe).getRecipeWidth() : 3;
-			int height = recipe instanceof IShapedRecipe ? ((IShapedRecipe<?>)craftingRecipe).getRecipeHeight() : 3;
-			
-			for(int xx = 0; xx < width; xx++)
-				for(int yy = 0; yy < height; yy++){
-					int index = xx + yy * width;
-					if(index < recipe.getIngredients().size()){
-						int itemX = ulX + xx * 24;
-						int itemY = ulY + yy * 24;
-						ItemStack[] stacks = recipe.getIngredients().get(index).getMatchingStacks();
-						if(stacks.length > 0)
-							tooltipArea(matrices, stacks[displayIndex(stacks.length, player)], mouseX, mouseY, screenWidth, screenHeight, itemX, itemY);
-					}
-				}
-			
-			// Display aspect tooltips
-			UndecidedAspectStack[] stacks = craftingRecipe.getAspectStacks();
-			int spacing = (stacks.length == 1) ? 0 : (stacks.length >= 6) ? 1 : (stacks.length < 4) ? 3 : 2;
-			int aspectX = ulX + 73 / 2 - (craftingRecipe.getAspectStacks().length * (16 + spacing * 2)) / 2 - 4;
-			int aspectY = ulY + 82;
-			for(int i = 0, length = stacks.length; i < length; i++){
-				UndecidedAspectStack stack = stacks[i];
-				String displayed = stack.any ? I18n.format("aspect.any") : I18n.format("aspect." + stack.stack.getAspect().name().toLowerCase());
-				int areaX = aspectX + i * (16 + 2 * spacing) + spacing;
-				if(mouseX >= areaX && mouseX < areaX + 16 && mouseY >= aspectY && mouseY < aspectY + 16)
-					ClientUiUtil.drawAspectStyleTooltip(matrices, Collections.singletonList(new StringTextComponent(displayed)), mouseX, mouseY, screenWidth, screenHeight);
-			}
-		}
 	}
 }
