@@ -184,12 +184,6 @@ public class Aspects{
 		return new ArrayList<>(ASPECTS.values());
 	}
 	
-	public static Aspect valueOf(String value){
-		return ASPECTS.values().stream()
-				.filter(entry -> entry.name().equalsIgnoreCase(value))
-				.findAny().orElse(Aspects.EMPTY);
-	}
-	
 	/**
 	 * Returns array of all elements, except primals and sins.
 	 *

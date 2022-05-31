@@ -77,7 +77,7 @@ public class AspectCell implements AspectHolder{
 		CompoundNBT nbt = new CompoundNBT();
 		nbt.putFloat("amount", getStack().getAmount());
 		nbt.putFloat("capacity", getCapacity());
-		nbt.putString("aspect", getStack().getAspect().name().toLowerCase());
+		nbt.putString("aspect", getStack().getAspect().keyString());
 		nbt.putBoolean("voids", voids);
 		nbt.putBoolean("canInsert", canInsert);
 		return nbt;
@@ -86,7 +86,7 @@ public class AspectCell implements AspectHolder{
 	public void deserializeNBT(CompoundNBT data){
 		capacity = data.getInt("capacity");
 		int amount = data.getInt("amount");
-		Aspect aspect = Aspects.valueOf(data.getString("aspect").toUpperCase());
+		Aspect aspect = Aspect.fromKeyString(data.getString("aspect"));
 		voids = data.getBoolean("voids");
 		// getter returns false by default, but we want this to be true by default
 		canInsert = !data.contains("canInsert") || data.getBoolean("canInsert");

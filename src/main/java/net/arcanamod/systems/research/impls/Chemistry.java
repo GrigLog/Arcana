@@ -7,7 +7,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.arcanamod.Arcana;
 import net.arcanamod.aspects.Aspect;
-import net.arcanamod.aspects.Aspects;
 import net.arcanamod.aspects.handlers.AspectHandler;
 import net.arcanamod.containers.ResearchTableContainer;
 import net.arcanamod.containers.slots.AspectSlot;
@@ -77,7 +76,7 @@ public class Chemistry extends Puzzle{
 		CompoundNBT compound = new CompoundNBT();
 		ListNBT nodeList = new ListNBT();
 		for(Aspect node : nodes)
-			nodeList.add(StringNBT.valueOf(node.name()));
+			nodeList.add(StringNBT.valueOf(node.keyString()));
 		compound.put("nodes", nodeList);
 		return compound;
 	}
@@ -85,7 +84,7 @@ public class Chemistry extends Puzzle{
 	public static Chemistry fromNBT(CompoundNBT passData){
 		List<Aspect> nodes = new ArrayList<>();
 		for(INBT node : passData.getList("nodes", Constants.NBT.TAG_STRING))
-			nodes.add(Aspects.valueOf(node.getString()));
+			nodes.add(Aspect.fromKeyString(node.getString()));
 		return new Chemistry(nodes);
 	}
 	

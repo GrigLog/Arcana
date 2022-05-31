@@ -78,7 +78,15 @@ public class Aspect {
 		return Aspects.ASPECTS.inverse().get(this);
 	}
 
+	public String keyString(){
+		return toResourceLocation().toString();
+	}
+
 	public static Aspect fromResourceLocation(ResourceLocation resourceLocation) {
 		return Aspects.ASPECTS.get(resourceLocation);
+	}
+
+	public static Aspect fromKeyString(String resourceLocation){
+		return fromResourceLocation(new ResourceLocation(resourceLocation));
 	}
 }
